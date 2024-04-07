@@ -330,6 +330,9 @@ mod tests {
     use crate::core::card::*;
     use crate::core::hand::*;
 
+    #[cfg(feature = "rank-test-all-hands")]
+    use {crate::core::deck::Deck, itertools::Itertools, std::collections::HashMap};
+
     #[test]
     fn test_keep_highest() {
         assert_eq!(0b100, keep_highest(0b111));
@@ -361,7 +364,7 @@ mod tests {
             | 1 << Value::Ten as u32
             | 1 << Value::Five as u32;
 
-        assert!(Rank::HighCard(rank) == hand.rank_five());
+        assert_eq!(Rank::HighCard(rank), hand.rank_five());
     }
 
     #[test]
@@ -373,14 +376,14 @@ mod tests {
             | 1 << Value::Ten as u32
             | 1 << Value::Five as u32;
 
-        assert!(Rank::Flush(rank) == hand.rank_five());
+        assert_eq!(Rank::Flush(rank), hand.rank_five());
     }
 
     #[test]
     fn test_full_house() {
         let hand = Hand::new_from_str("AdAc9d9c9s").unwrap();
         let rank = (1 << (Value::Nine as u32)) << 13 | 1 << (Value::Ace as u32);
-        assert!(Rank::FullHouse(rank) == hand.rank_five());
+        assert_eq!(Rank::FullHouse(rank), hand.rank_five());
     }
 
     #[test]
@@ -389,7 +392,7 @@ mod tests {
         let hand = Hand::new_from_str("AdAc9D9cTs").unwrap();
         let rank =
             (1 << Value::Ace as u32 | 1 << Value::Nine as u32) << 13 | 1 << Value::Ten as u32;
-        assert!(Rank::TwoPair(rank) == hand.rank_five());
+        assert_eq!(Rank::TwoPair(rank), hand.rank_five());
     }
 
     #[test]
@@ -400,28 +403,28 @@ mod tests {
             | 1 << Value::Eight as u32
             | 1 << Value::Ten as u32;
 
-        assert!(Rank::OnePair(rank) == hand.rank_five());
+        assert_eq!(Rank::OnePair(rank), hand.rank_five());
     }
 
     #[test]
     fn test_four_of_a_kind() {
         let hand = Hand::new_from_str("AdAcAsAhTs").unwrap();
-        assert!(
-            Rank::FourOfAKind((1 << (Value::Ace as u32) << 13) | 1 << (Value::Ten as u32))
-                == hand.rank_five()
+        assert_eq!(
+            Rank::FourOfAKind((1 << (Value::Ace as u32) << 13) | 1 << (Value::Ten as u32)),
+            hand.rank_five()
         );
     }
 
     #[test]
     fn test_wheel() {
         let hand = Hand::new_from_str("Ad2c3s4h5s").unwrap();
-        assert!(Rank::Straight(0) == hand.rank_five());
+        assert_eq!(Rank::Straight(0), hand.rank_five());
     }
 
     #[test]
     fn test_straight() {
         let hand = Hand::new_from_str("2c3s4h5s6d").unwrap();
-        assert!(Rank::Straight(1) == hand.rank_five());
+        assert_eq!(Rank::Straight(1), hand.rank_five());
     }
 
     #[test]
@@ -429,7 +432,7 @@ mod tests {
         let hand = Hand::new_from_str("2c2s2h5s6d").unwrap();
         let rank =
             (1 << (Value::Two as u32)) << 13 | 1 << (Value::Five as u32) | 1 << (Value::Six as u32);
-        assert!(Rank::ThreeOfAKind(rank) == hand.rank_five());
+        assert_eq!(Rank::ThreeOfAKind(rank), hand.rank_five());
     }
 
     #[test]
@@ -521,5 +524,82 @@ mod tests {
         let pair_rank = ((1 << Value::Two as u32) | (1 << Value::Eight as u32)) << 13;
         let low_rank = 1 << Value::King as u32;
         assert_eq!(Rank::TwoPair(pair_rank | low_rank), h.rank());
+    }
+
+    #[cfg(feature = "rank-test-all-hands")]
+    #[test]
+    fn test_all_hands() {
+        let mut hands = 0;
+        let mut frequencies = HashMap::from([
+            (Rank::HighCard(0), 0),
+            (Rank::OnePair(0), 0),
+            (Rank::TwoPair(0), 0),
+            (Rank::ThreeOfAKind(0), 0),
+            (Rank::Straight(0), 0),
+            (Rank::Flush(0), 0),
+            (Rank::FullHouse(0), 0),
+            (Rank::FourOfAKind(0), 0),
+            (Rank::StraightFlush(0), 0),
+        ]);
+        for cards in Deck::default().into_iter().combinations(5) {
+            hands += 1;
+            let hand = Hand::new_with_cards(cards);
+            let rank = hand.rank_five();
+            let key = match rank {
+                Rank::HighCard(_) => Rank::HighCard(0),
+                Rank::OnePair(_) => Rank::OnePair(0),
+                Rank::TwoPair(_) => Rank::TwoPair(0),
+                Rank::ThreeOfAKind(_) => Rank::ThreeOfAKind(0),
+                Rank::Straight(_) => Rank::Straight(0),
+                Rank::Flush(_) => Rank::Flush(0),
+                Rank::FullHouse(_) => Rank::FullHouse(0),
+                Rank::FourOfAKind(_) => Rank::FourOfAKind(0),
+                Rank::StraightFlush(_) => Rank::StraightFlush(0),
+            };
+            frequencies.entry(key).and_modify(|v| *v += 1);
+        }
+
+        assert_eq!(hands, 2_598_960);
+        assert_eq!(
+            frequencies[&Rank::HighCard(0)],
+            1302540,
+            "1302540 High Card hands"
+        );
+        assert_eq!(
+            frequencies[&Rank::OnePair(0)],
+            1098240,
+            "1098240 Pair hands"
+        );
+        assert_eq!(
+            frequencies[&Rank::TwoPair(0)],
+            123552,
+            "1098240 Two Pair hands"
+        );
+        assert_eq!(
+            frequencies[&Rank::ThreeOfAKind(0)],
+            54912,
+            "1098240 Three of a Kind Hands"
+        );
+        assert_eq!(
+            frequencies[&Rank::Straight(0)],
+            10200,
+            "10200 Straight Hands"
+        );
+        assert_eq!(frequencies[&Rank::Flush(0)], 5108, "5108 Flush Hands");
+        assert_eq!(
+            frequencies[&Rank::FullHouse(0)],
+            3744,
+            "5108 Full House Hands"
+        );
+        assert_eq!(
+            frequencies[&Rank::FourOfAKind(0)],
+            624,
+            "624 Four of a Kind Hands"
+        );
+        assert_eq!(
+            frequencies[&Rank::StraightFlush(0)],
+            40,
+            "40 Straight Flush Hands"
+        );
     }
 }
