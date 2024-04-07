@@ -61,6 +61,10 @@ name = "rank"
 harness = false
 
 [[bench]]
+name = "rank_all"
+harness = false
+
+[[bench]]
 name = "icm_sim"
 harness = false
 
