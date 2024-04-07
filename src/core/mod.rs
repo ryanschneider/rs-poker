@@ -33,6 +33,10 @@ mod rank;
 /// Export the trait and the results.
 pub use self::rank::{Rank, Rankable};
 
+/// Specialized five card ranking code using Cactus Kev's evaluator.
+#[cfg(feature = "rank-cactus-kev")]
+mod rank_cactus_kev;
+
 // u16 backed player set.
 mod player_bit_set;
 // u64 backed card set.

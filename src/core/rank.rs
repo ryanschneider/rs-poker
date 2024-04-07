@@ -1,6 +1,9 @@
 use crate::core::card::Card;
 use crate::core::hand::Hand;
 
+#[cfg(feature = "rank-cactus-kev")]
+use crate::core::rank_cactus_kev;
+
 /// All the different possible hand ranks.
 /// For each hand rank the u32 corresponds to
 /// the strength of the hand in comparison to others
@@ -191,9 +194,34 @@ pub trait Rankable {
         }
     }
 
+    /// Rank a five card hand, using Cactus Kev's evaluator:
+    ///   http://suffe.cool/poker/evaluator.html
+    /// With the improved perfect hash function by Paul Senzee.  Callee must
+    /// contain exactly five cards.
+    #[cfg(feature = "rank-cactus-kev")]
+    fn rank_five(&self) -> Rank {
+        assert_eq!(self.cards().len(), 5);
+        let mut iter = self.cards().iter();
+        let cards: [Card; 5] = core::array::from_fn(|_| *iter.next().unwrap());
+        let value = rank_cactus_kev::compute_value(&cards);
+        let inv_value = u32::MAX - value;
+        match value {
+            6186..=u32::MAX => Rank::HighCard(inv_value),
+            3326..=6185 => Rank::OnePair(inv_value),
+            2468..=3325 => Rank::TwoPair(inv_value),
+            1610..=2467 => Rank::ThreeOfAKind(inv_value),
+            1600..=1609 => Rank::Straight(inv_value),
+            323..=1599 => Rank::Flush(inv_value),
+            167..=322 => Rank::FullHouse(inv_value),
+            11..=166 => Rank::FourOfAKind(inv_value),
+            0..=10 => Rank::StraightFlush(inv_value),
+        }
+    }
+
     /// Rank this hand. It doesn't do any caching so it's left up to the user
     /// to understand that duplicate work will be done if this is called more
     /// than once.
+    #[cfg(not(feature = "rank-cactus-kev"))]
     fn rank_five(&self) -> Rank {
         // use for bitset
         let mut suit_set: u32 = 0;
