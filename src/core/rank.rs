@@ -204,17 +204,18 @@ pub trait Rankable {
         let mut iter = self.cards().iter();
         let cards: [Card; 5] = core::array::from_fn(|_| *iter.next().unwrap());
         let value = rank_cactus_kev::compute_value(&cards);
-        let inv_value = u32::MAX - value;
+        assert!(value <= 7462);
         match value {
-            6186..=u32::MAX => Rank::HighCard(inv_value),
-            3326..=6185 => Rank::OnePair(inv_value),
-            2468..=3325 => Rank::TwoPair(inv_value),
-            1610..=2467 => Rank::ThreeOfAKind(inv_value),
-            1600..=1609 => Rank::Straight(inv_value),
-            323..=1599 => Rank::Flush(inv_value),
-            167..=322 => Rank::FullHouse(inv_value),
-            11..=166 => Rank::FourOfAKind(inv_value),
-            0..=10 => Rank::StraightFlush(inv_value),
+            7463..=u32::MAX => unreachable!(),
+            6186..=7462 => Rank::HighCard(7462 - value),
+            3326..=6185 => Rank::OnePair(6185 - value),
+            2468..=3325 => Rank::TwoPair(3325 - value),
+            1610..=2467 => Rank::ThreeOfAKind(2467 - value),
+            1600..=1609 => Rank::Straight(1609 - value),
+            323..=1599 => Rank::Flush(1599 - value),
+            167..=322 => Rank::FullHouse(322 - value),
+            11..=166 => Rank::FourOfAKind(166 - value),
+            0..=10 => Rank::StraightFlush(10 - value),
         }
     }
 
